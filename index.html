@@ -11,10 +11,15 @@
     form > label { display:block; margin:0.5rem 0; }
     button { margin-top:1rem; padding:0.5rem 1rem; }
     pre { background:#f4f4f4; padding:1rem; white-space: pre-wrap; }
+    #chat-box { border:1px solid #ccc; padding:1rem; max-height:300px; overflow:auto; margin-top:2rem; }
+    #user-input { width:80%; padding:0.5rem; }
+    #chat-section { margin-top:2rem; }
   </style>
 </head>
 <body>
   <h1>Excursões Cold Chain</h1>
+
+  <!-- Formulário de Análise -->
   <form id="f" enctype="multipart/form-data">
     <label>Embarque:<br><input name="embarque" required></label>
     <label>Relatório de Temperatura (PDF):<br>
@@ -25,7 +30,10 @@
     </label>
     <button type="submit">Enviar para análise</button>
   </form>
+
   <pre id="out"></pre>
+
+  <!-- Script de envio para análise -->
   <script>
     const backend = 'https://coldchain-backend.onrender.com/analisar';
     document.getElementById('f').onsubmit = async e => {
@@ -38,38 +46,44 @@
         const j = await resp.json();
         out.textContent = j.report_md;
       } catch (err) {
-        out.textContent = 'Erro: ' + err;
+        out.textContent = 'Erro: ' + err.message;
       }
     };
+  </script>
+
+  <!-- Chat com GPT -->
+  <div id="chat-section">
+    <h2>Chat com GPT</h2>
+    <div id="chat-box"></div>
+    <input type="text" id="user-input" placeholder="Digite sua dúvida...">
+    <button onclick="enviarPergunta()">Enviar</button>
+  </div>
+
+  <script>
+    async function enviarPergunta() {
+      const pergunta = document.getElementById("user-input").value.trim();
+      const chatBox = document.getElementById("chat-box");
+      if (!pergunta) return;
+
+      chatBox.innerHTML += `<p><strong>Você:</strong> ${pergunta}</p>`;
+      document.getElementById("user-input").value = "";
+
+      try {
+        const resp = await fetch('https://coldchain-backend.onrender.com/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pergunta })
+        });
+
+        if (!resp.ok) throw new Error(await resp.text());
+        const data = await resp.json();
+        chatBox.innerHTML += `<p><strong>GPT:</strong> ${data.resposta}</p>`;
+        chatBox.scrollTop = chatBox.scrollHeight;
+      } catch (err) {
+        chatBox.innerHTML += `<p style="color:red;"><strong>Erro:</strong> ${err.message}</p>`;
+      }
+    }
   </script>
 </body>
 </html>
 
-<h2>Chat com GPT</h2>
-<div id="chat-box" style="border:1px solid #ccc; padding:1rem; max-height:300px; overflow:auto;"></div>
-<input type="text" id="user-input" placeholder="Digite sua dúvida..." style="width:80%;">
-<button onclick="enviarPergunta()">Enviar</button>
-<pre id="resposta-gpt"></pre>
-
-<script>
-async function enviarPergunta() {
-  const pergunta = document.getElementById("user-input").value;
-  const chatBox = document.getElementById("chat-box");
-  chatBox.innerHTML += `<p><strong>Você:</strong> ${pergunta}</p>`;
-  document.getElementById("user-input").value = "";
-
-  try {
-    const resp = await fetch('https://coldchain-backend.onrender.com/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pergunta })
-    });
-
-    const data = await resp.json();
-    chatBox.innerHTML += `<p><strong>GPT:</strong> ${data.resposta}</p>`;
-    chatBox.scrollTop = chatBox.scrollHeight;
-  } catch (err) {
-    chatBox.innerHTML += `<p style="color:red;">Erro: ${err.message}</p>`;
-  }
-}
-</script>
