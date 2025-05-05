@@ -1,23 +1,22 @@
 {
-  "name": "ColdChain Follow",
+  "name": "ColdChain – Follow Advisor",
   "short_name": "ColdChain",
-  "start_url": "./index.html",
+  "description": "Análise de Embarques e excursões de temperatura em cadeia fria – solução da Follow Advisor",
+  "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#007BFF",
-  "description": "Aplicativo da Follow Advisor para análise de relatórios da cadeia fria.",
+  "theme_color": "#0074D9",
+  "orientation": "portrait",
   "icons": [
     {
-      "src": "icon-192.png",
+      "src": "assets/icon-192.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "icon-512.png",
+      "src": "assets/icon-512.png",
       "sizes": "512x512",
       "type": "image/png"
     }
-  ],
-  "lang": "pt-BR",
-  "orientation": "portrait-primary"
+  ]
 }
