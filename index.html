@@ -1,27 +1,24 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>ChillChain</title>
   <link rel="manifest" href="manifest.json">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <style>
     body { font-family: sans-serif; padding:1rem; }
     h1 { margin-bottom:1rem; }
     form > label { display:block; margin:0.5rem 0; }
     button { margin-top:1rem; padding:0.5rem 1rem; }
-    pre { background:#f4f4f4; padding:1rem; white-space: pre-wrap; }
-    #chat-box { border:1px solid #ccc; padding:1rem; max-height:300px; overflow:auto; margin-top:2rem; }
-    #user-input { width:80%; padding:0.5rem; }
-    #chat-section { margin-top:2rem; }
+    pre, #chat-box { background:#f4f4f4; padding:1rem; white-space: pre-wrap; }
+    #chat-box { max-height:300px; overflow:auto; margin-top:1rem; }
   </style>
 </head>
 <body>
   <h1>Excursões Cold Chain</h1>
 
-  <!-- Formulário de Análise -->
   <form id="f" enctype="multipart/form-data">
     <label>Embarque:<br><input name="embarque" required></label>
     <label>Relatório de Temperatura (PDF):<br>
@@ -33,59 +30,85 @@
     <button type="submit">Enviar para análise</button>
   </form>
 
-  <pre id="out"></pre>
+  <pre id="out">Resultado da análise aparecerá aqui…</pre>
 
-  <!-- Script de envio para análise -->
+  <h2>Gráfico de Temperatura do Embarque</h2>
+  <canvas id="graficoGPT" width="400" height="200" style="margin-top: 2rem;"></canvas>
+
+  <h2>Chat com GPT</h2>
+  <div id="chat-box"></div>
+  <input type="text" id="user-input" placeholder="Digite sua dúvida..." style="width:80%;">
+  <button onclick="enviarPergunta()">Enviar</button>
+
   <script>
-    const backend = 'https://coldchain-backend.onrender.com/analisar';
+    const backend = 'https://coldchain-backend.onrender.com';
+
+    let chartRef = null;
+    function renderGrafico(graficoData) {
+      const ctx = document.getElementById('graficoGPT').getContext('2d');
+      if (chartRef) chartRef.destroy();
+      chartRef = new Chart(ctx, {
+        type: graficoData.tipo,
+        data: {
+          labels: graficoData.labels,
+          datasets: graficoData.datasets
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { position: 'top' },
+            title: { display: true, text: 'Gráfico gerado a partir da análise do embarque' }
+          }
+        }
+      });
+    }
+
     document.getElementById('f').onsubmit = async e => {
       e.preventDefault();
       const out = document.getElementById('out');
       out.textContent = 'Analisando…';
       try {
-        const resp = await fetch(backend, { method: 'POST', body: new FormData(e.target) });
+        const resp = await fetch(`${backend}/analisar`, {
+          method: 'POST',
+          body: new FormData(e.target)
+        });
         if (!resp.ok) throw new Error(await resp.text());
         const j = await resp.json();
-        out.textContent = j.report_md;
+        out.innerHTML = marked.parse(j.report_md);
+        if (j.grafico) renderGrafico(j.grafico);
       } catch (err) {
-        out.textContent = 'Erro: ' + err.message;
+        out.textContent = 'Erro: ' + err;
       }
     };
-  </script>
 
-  <!-- Chat com GPT -->
-  <div id="chat-section">
-    <h2>Chat com GPT</h2>
-    <div id="chat-box"></div>
-   <input type="text" id="user-input" placeholder="Digite sua dúvida..." style="width:80%;" onkeypress="if(event.key === 'Enter'){ enviarPergunta(); return false; }">
-<button onclick="enviarPergunta()">Enviar</button>
-  </div>
-
-  <script>
     async function enviarPergunta() {
-      const pergunta = document.getElementById("user-input").value.trim();
+      const pergunta = document.getElementById("user-input").value;
       const chatBox = document.getElementById("chat-box");
-      if (!pergunta) return;
-
       chatBox.innerHTML += `<p><strong>Você:</strong> ${pergunta}</p>`;
       document.getElementById("user-input").value = "";
 
       try {
-        const resp = await fetch('https://coldchain-backend.onrender.com/chat', {
+        const resp = await fetch(`${backend}/chat`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ pergunta })
         });
 
-        if (!resp.ok) throw new Error(await resp.text());
         const data = await resp.json();
-        chatBox.innerHTML += `<p><strong>GPT:</strong> ${data.resposta}</p>`;
+        chatBox.innerHTML += `<div><strong>GPT:</strong><br>${marked.parse(data.resposta)}</div>`;
         chatBox.scrollTop = chatBox.scrollHeight;
       } catch (err) {
-        chatBox.innerHTML += `<p style="color:red;"><strong>Erro:</strong> ${err.message}</p>`;
+        chatBox.innerHTML += `<p style="color:red;">Erro: ${err.message}</p>`;
       }
     }
+
+    // Atalho: enviar com Enter
+    document.getElementById("user-input").addEventListener("keydown", function (e) {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        enviarPergunta();
+      }
+    });
   </script>
 </body>
 </html>
-
