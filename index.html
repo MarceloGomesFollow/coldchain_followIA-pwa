@@ -55,8 +55,8 @@
   <div id="chat-section">
     <h2>Chat com GPT</h2>
     <div id="chat-box"></div>
-    <input type="text" id="user-input" placeholder="Digite sua dúvida...">
-    <button onclick="enviarPergunta()">Enviar</button>
+   <input type="text" id="user-input" placeholder="Digite sua dúvida..." style="width:80%;" onkeypress="if(event.key === 'Enter'){ enviarPergunta(); return false; }">
+<button onclick="enviarPergunta()">Enviar</button>
   </div>
 
   <script>
