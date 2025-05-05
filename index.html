@@ -44,3 +44,32 @@
   </script>
 </body>
 </html>
+
+<h2>Chat com GPT</h2>
+<div id="chat-box" style="border:1px solid #ccc; padding:1rem; max-height:300px; overflow:auto;"></div>
+<input type="text" id="user-input" placeholder="Digite sua dúvida..." style="width:80%;">
+<button onclick="enviarPergunta()">Enviar</button>
+<pre id="resposta-gpt"></pre>
+
+<script>
+async function enviarPergunta() {
+  const pergunta = document.getElementById("user-input").value;
+  const chatBox = document.getElementById("chat-box");
+  chatBox.innerHTML += `<p><strong>Você:</strong> ${pergunta}</p>`;
+  document.getElementById("user-input").value = "";
+
+  try {
+    const resp = await fetch('https://coldchain-backend.onrender.com/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pergunta })
+    });
+
+    const data = await resp.json();
+    chatBox.innerHTML += `<p><strong>GPT:</strong> ${data.resposta}</p>`;
+    chatBox.scrollTop = chatBox.scrollHeight;
+  } catch (err) {
+    chatBox.innerHTML += `<p style="color:red;">Erro: ${err.message}</p>`;
+  }
+}
+</script>
