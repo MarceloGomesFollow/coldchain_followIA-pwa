@@ -1,21 +1,22 @@
-self.addEventListener("install", e => {
-  e.waitUntil(
-    caches.open("chillchain-cache-v1").then(cache => {
+self.addEventListener('install', function (event) {
+  console.log('[ServiceWorker] Instalando...');
+  event.waitUntil(
+    caches.open('coldchain-v1').then(function (cache) {
       return cache.addAll([
-        "/",
-        "/index.html",
-        "/manifest.json",
-        "/icon-192.png",
-        "/icon-512.png"
+        '/',
+        '/index.html',
+        '/manifest.json',
+        '/assets/icon-192.png',
+        '/assets/icon-512.png'
       ]);
     })
   );
 });
 
-self.addEventListener("fetch", e => {
-  e.respondWith(
-    caches.match(e.request).then(response => {
-      return response || fetch(e.request);
+self.addEventListener('fetch', function (event) {
+  event.respondWith(
+    caches.match(event.request).then(function (response) {
+      return response || fetch(event.request);
     })
   );
 });
