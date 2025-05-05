@@ -9,7 +9,8 @@
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <style>
     body { font-family: sans-serif; padding:1rem; }
-    h1 { margin-bottom:1rem; }
+    header { display:flex; align-items:center; gap:1rem; margin-bottom:2rem; }
+    header img { height:60px; }
     form > label { display:block; margin:0.5rem 0; }
     button { margin-top:1rem; padding:0.5rem 1rem; }
     pre, #chat-box { background:#f4f4f4; padding:1rem; white-space: pre-wrap; }
@@ -17,7 +18,13 @@
   </style>
 </head>
 <body>
-  <h1>Excursões Cold Chain</h1>
+
+  <!-- LOGO HEADER -->
+  <header>
+    <img src="assets/follow-logo.png" alt="Follow Advisor">
+    <h1>Excursões Cold Chain</h1>
+  </header>
+  <!-- Caso mude o caminho da imagem, edite src="assets/follow-logo.png" -->
 
   <form id="f" enctype="multipart/form-data">
     <label>Embarque:<br><input name="embarque" required></label>
@@ -110,13 +117,13 @@
       }
     });
   </script>
-  <script>
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/service-worker.js')
-      .then(() => console.log('✔ Service Worker registrado'))
-      .catch(err => console.error('❌ Erro ao registrar Service Worker:', err));
-  }
-</script>
 
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/service-worker.js')
+        .then(() => console.log('✔ Service Worker registrado'))
+        .catch(err => console.error('❌ Erro ao registrar Service Worker:', err));
+    }
+  </script>
 </body>
 </html>
