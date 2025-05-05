@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>ChillChain</title>
+  <link rel="manifest" href="manifest.json">
+  <style>
+    body { font-family: sans-serif; padding:1rem; }
+    h1 { margin-bottom:1rem; }
+    form > label { display:block; margin:0.5rem 0; }
+    button { margin-top:1rem; padding:0.5rem 1rem; }
+    pre { background:#f4f4f4; padding:1rem; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <h1>Excursões Cold Chain</h1>
+  <form id="f" enctype="multipart/form-data">
+    <label>Embarque:<br><input name="embarque" required></label>
+    <label>Relatório de Temperatura (PDF):<br>
+      <input type="file" name="temps" accept="application/pdf" required>
+    </label>
+    <label>SM (PDF):<br>
+      <input type="file" name="sm" accept="application/pdf" required>
+    </label>
+    <button type="submit">Enviar para análise</button>
+  </form>
+  <pre id="out"></pre>
+  <script>
+    const backend = 'https://coldchain.onrender.com/analyse';
+    document.getElementById('f').onsubmit = async e => {
+      e.preventDefault();
+      const out = document.getElementById('out');
+      out.textContent = 'Analisando…';
+      try {
+        const resp = await fetch(backend, { method: 'POST', body: new FormData(e.target) });
+        if (!resp.ok) throw new Error(await resp.text());
+        const j = await resp.json();
+        out.textContent = j.report_md;
+      } catch (err) {
+        out.textContent = 'Erro: ' + err;
+      }
+    };
+  </script>
+</body>
+</html>
