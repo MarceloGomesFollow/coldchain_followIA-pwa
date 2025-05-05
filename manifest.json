@@ -1,11 +1,11 @@
 {
-  "name": "ChillChain",
-  "short_name": "ChillChain",
-  "description": "Análise de cadeia fria com IA — Follow Advisor",
-  "start_url": "/index.html",
+  "name": "ColdChain Follow",
+  "short_name": "ColdChain",
+  "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#0099cc",
+  "theme_color": "#007BFF",
+  "description": "Aplicativo da Follow Advisor para análise de relatórios da cadeia fria.",
   "icons": [
     {
       "src": "icon-192.png",
@@ -17,5 +17,7 @@
       "sizes": "512x512",
       "type": "image/png"
     }
-  ]
+  ],
+  "lang": "pt-BR",
+  "orientation": "portrait-primary"
 }
