@@ -1,3 +1,4 @@
+<!-- index.html -->
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -14,29 +15,32 @@
     form > label { display:block; margin:0.5rem 0; }
     button { margin-top:1rem; padding:0.5rem 1rem; }
     pre, #chat-box { background:#f4f4f4; padding:1rem; white-space: pre-wrap; }
-    #chat-box { max-height:300px; overflow:auto; margin-top:1rem; }
   </style>
 </head>
 <body>
-
-  <!-- LOGO HEADER -->
   <header>
-    <img src="assets/follow-logo.png" alt="Follow Advisor">
-    <h1>Excursões Cold Chain</h1>
+    <img src="logo.png" alt="ChillChain">
+    <h1>ColdChain Analytics</h1>
   </header>
 
-  <form id="f" enctype="multipart/form-data">
-    <label>Embarque:<br><input name="embarque" required></label>
-    <label>Relatório de Temperatura (PDF):<br>
+  <form id="form">
+    <label>
+      Embarque:
+      <input name="embarque" required>
+    </label>
+    <label>
+      PDF Temperatura:
       <input type="file" name="temps" accept="application/pdf" required>
     </label>
-    <label>SM (PDF):<br>
+    <label>
+      PDF SM:
       <input type="file" name="sm" accept="application/pdf" required>
     </label>
-    <button type="submit">Enviar para análise</button>
+    <button type="submit">Analisar</button>
   </form>
 
-  <pre id="out">Resultado da análise aparecerá aqui…</pre>
+  <h2>Relatório Executivo</h2>
+  <div id="output"></div>
 
   <h2>Gráfico de Temperatura do Embarque</h2>
   <canvas id="graficoGPT" width="595" height="420" style="margin-top: 2rem;"></canvas>
@@ -48,8 +52,8 @@
 
   <script>
     const backend = 'https://coldchain-backend.onrender.com';
-
     let chartRef = null;
+
     function renderGrafico(graficoData) {
       const ctx = document.getElementById('graficoGPT').getContext('2d');
       if (chartRef) chartRef.destroy();
@@ -59,42 +63,14 @@
           labels: graficoData.labels,
           datasets: graficoData.datasets
         },
-        options: {
-          responsive: true,
-          interaction: { mode: 'index', intersect: false },
-          plugins: {
-            legend: { position: 'top' },
-            title: { display: true, text: 'Gráfico de Temperatura por Sensor' },
-            tooltip: {
-              callbacks: {
-                label: function(context) {
-                  return `${context.dataset.label}: ${context.formattedValue}°C`;
-                }
-              }
-            }
-          },
-          scales: {
-            y: {
-              title: { display: true, text: 'Temperatura (°C)' },
-              suggestedMin: 0,
-              suggestedMax: 10
-            },
-            x: {
-              title: { display: true, text: 'Horário' },
-              ticks: {
-                maxRotation: 90,
-                autoSkip: false
-              }
-            }
-          }
-        }
+        options: { responsive: true, maintainAspectRatio: false }
       });
     }
 
-    document.getElementById('f').onsubmit = async e => {
+    document.getElementById('form').addEventListener('submit', async e => {
       e.preventDefault();
-      const out = document.getElementById('out');
-      out.textContent = 'Analisando…';
+      const out = document.getElementById('output');
+      out.textContent = 'Analisando...';
       try {
         const resp = await fetch(`${backend}/analisar`, {
           method: 'POST',
@@ -107,43 +83,31 @@
       } catch (err) {
         out.textContent = 'Erro: ' + err;
       }
-    };
+    });
 
     async function enviarPergunta() {
       const pergunta = document.getElementById("user-input").value;
-      const chatBox = document.getElementById("chat-box");
-      chatBox.innerHTML += `<p><strong>Você:</strong> ${pergunta}</p>`;
-      document.getElementById("user-input").value = "";
-
+      if (!pergunta) return;
+      const box = document.getElementById("chat-box");
+      box.textContent = "Carregando...";
       try {
         const resp = await fetch(`${backend}/chat`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ pergunta })
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({pergunta})
         });
-
-        const data = await resp.json();
-        chatBox.innerHTML += `<div><strong>GPT:</strong><br>${marked.parse(data.resposta)}</div>`;
-        chatBox.scrollTop = chatBox.scrollHeight;
+        const j = await resp.json();
+        box.innerHTML = j.resposta || j.erro;
       } catch (err) {
-        chatBox.innerHTML += `<p style="color:red;">Erro: ${err.message}</p>`;
+        box.textContent = 'Erro: ' + err;
       }
     }
 
-    // Atalho: enviar com Enter
-    document.getElementById("user-input").addEventListener("keydown", function (e) {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        enviarPergunta();
-      }
-    });
-  </script>
-
-  <script>
+    // Registro do Service Worker
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/service-worker.js')
-        .then(() => console.log('✔ Service Worker registrado'))
-        .catch(err => console.error('❌ Erro ao registrar Service Worker:', err));
+        .then(_=>console.log('✔ SW registrado'))
+        .catch(err=>console.error('❌ SW falhou:', err));
     }
   </script>
 </body>
