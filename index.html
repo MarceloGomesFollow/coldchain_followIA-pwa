@@ -50,24 +50,33 @@
     const backend = 'https://coldchain-backend.onrender.com';
 
     let chartRef = null;
-    function renderGrafico(graficoData) {
-      const ctx = document.getElementById('graficoGPT').getContext('2d');
-      if (chartRef) chartRef.destroy();
-      chartRef = new Chart(ctx, {
-        type: graficoData.tipo,
-        data: {
-          labels: graficoData.labels,
-          datasets: graficoData.datasets
+   function renderGrafico(graficoData) {
+  const ctx = document.getElementById('graficoGPT').getContext('2d');
+  if (chartRef) chartRef.destroy();
+  chartRef = new Chart(ctx, {
+    type: graficoData.tipo,
+    data: {
+      labels: graficoData.labels,
+      datasets: graficoData.datasets
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { position: 'top' },
+        title: { display: true, text: 'Gráfico gerado a partir da análise do embarque' }
+      },
+      scales: {
+        y: {
+          title: { display: true, text: 'Temperatura (°C)' }
         },
-        options: {
-          responsive: true,
-          plugins: {
-            legend: { position: 'top' },
-            title: { display: true, text: 'Gráfico gerado a partir da análise do embarque' }
-          }
+        x: {
+          title: { display: true, text: 'Tempo (min)' }
         }
-      });
+      }
     }
+  });
+}
+
 
     document.getElementById('f').onsubmit = async e => {
       e.preventDefault();
