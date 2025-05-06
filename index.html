@@ -3,18 +3,20 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>ChillChain</title>
+  <title>ColdChain Analytics</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <style>
-    body { font-family:sans-serif; padding:1rem }
-    #grafico-container { width:100%; height:350px; margin:1rem 0 }
-    #graficoGPT { width:100% !important; height:100% !important }
+    body { font-family:sans-serif; padding:1rem; }
+    #grafico-container { width:100%; height:350px; margin:1rem 0; }
+    #graficoGPT { width:100% !important; height:100% !important; }
+    #loading { display:none; font-weight:bold; }
   </style>
 </head>
 <body>
   <h1>ColdChain Analytics</h1>
-  <form id="form">
+  <p id="loading">Carregando serviço, aguarde...</p>
+  <form id="form" style="display:none;">
     <label>Embarque:<input name="embarque" required></label>
     <label>PDF Temp:<input type="file" name="temps" accept="application/pdf" required></label>
     <label>PDF SM:<input type="file" name="sm" accept="application/pdf" required></label>
@@ -28,45 +30,58 @@
 
   <script>
     const backend = 'https://coldchain-backend.onrender.com';
-    const ctx = document.getElementById('graficoGPT').getContext('2d');
-    let chart = null;
+    const form    = document.getElementById('form');
+    const loadMsg = document.getElementById('loading');
+    const ctx     = document.getElementById('graficoGPT').getContext('2d');
+    let chart     = null;
 
-    document.getElementById('form').addEventListener('submit', async e => {
+    async function warmup() {
+      try {
+        loadMsg.style.display = 'block';
+        const resp = await fetch(`${backend}/health`);
+        if (resp.ok) {
+          loadMsg.style.display = 'none';
+          form.style.display = 'block';
+        } else throw 'Healthcheck falhou';
+      } catch (err) {
+        loadMsg.textContent = 'Erro ao conectar: ' + err;
+      }
+    }
+    warmup();
+
+    form.addEventListener('submit', async e => {
       e.preventDefault();
-      document.getElementById('output').textContent = 'Analisando…';
-      const res = await fetch(`${backend}/analisar`, {
-        method: 'POST', body: new FormData(e.target)
-      });
-      const j = await res.json();
-      document.getElementById('output').innerHTML = marked.parse(j.report_md);
-
-      // Reconstrói datasets JS (limites usando map no front)
-      const ds = j.grafico.datasets.map(d => {
-        if (d.type === 'line') return d;
-        // scatter recebido já com .data no formato {x,y}
-        return d;
-      });
-      // xLabels para categoria
-      const xLabels = ds.find(d=>d.type==='scatter').data.map(pt=>pt.x);
-
-      const config = {
-        data: { datasets: ds },
-        options: {
-          parsing: { xAxisKey:'x', yAxisKey:'y' },
-          scales: {
-            x: {
-              type: 'category',
-              labels: xLabels,
-              ticks: { autoSkip: true, maxTicksLimit: 15 }
-            },
-            y: {}
-          },
-          responsive: true,
-          maintainAspectRatio: false
+      document.getElementById('output').textContent = 'Analisando...';
+      try {
+        const res = await fetch(`${backend}/analisar`, {
+          method: 'POST', body: new FormData(form)
+        });
+        if (!res.ok) {
+          const txt = await res.text();
+          throw txt;
         }
-      };
-      if (chart) chart.destroy();
-      chart = new Chart(ctx, config);
+        const j = await res.json();
+        document.getElementById('output').innerHTML = marked.parse(j.report_md);
+
+        const ds      = j.grafico.datasets;
+        const xLabels = ds.find(d=>d.type==='scatter').data.map(pt=>pt.x);
+        const cfg     = {
+          data: { datasets: ds },
+          options: {
+            parsing: { xAxisKey:'x', yAxisKey:'y' },
+            scales: {
+              x: { type:'category', labels:xLabels, ticks:{autoSkip:true,maxTicksLimit:15} },
+              y: {}
+            },
+            responsive:true,maintainAspectRatio:false
+          }
+        };
+        if (chart) chart.destroy();
+        chart = new Chart(ctx, cfg);
+      } catch (err) {
+        document.getElementById('output').textContent = 'Erro: ' + err;
+        console.error('Analisar falhou:', err);
+      }
     });
   </script>
 </body>
