@@ -64,20 +64,25 @@
     }
     warmup();
 
-    form.addEventListener('submit', async e => {
-      e.preventDefault();
-      document.getElementById('output').textContent = 'Analisando...';
-      try {
-        const res = await fetch(`${backend}/analisar`, {
-          method: 'POST', body: new FormData(form)
-        });
-        if (!res.ok) {
-          const txt = await res.text();
-          throw txt;
-        }
-        const j = await res.json();
-        document.getElementById('output').innerHTML = marked.parse(j.report_md);
+<script>
+  // … código anterior …
 
+  form.addEventListener('submit', async e => {
+    e.preventDefault();
+    document.getElementById('output').textContent = 'Analisando...';
+    try {
+      const res = await fetch(`${backend}/analisar`, {
+        method: 'POST', body: new FormData(form)
+      });
+      if (!res.ok) {
+        const txt = await res.text();
+        throw txt;
+      }
+      const j = await res.json();
+      document.getElementById('output').innerHTML = marked.parse(j.report_md);
+
+      // Só tenta desenhar o gráfico se veio algo em j.grafico.datasets
+      if (j.grafico && Array.isArray(j.grafico.datasets) && j.grafico.datasets.length) {
         const ds      = j.grafico.datasets;
         const xLabels = ds.find(d=>d.type==='scatter').data.map(pt=>pt.x);
         const cfg     = {
@@ -93,11 +98,19 @@
         };
         if (chart) chart.destroy();
         chart = new Chart(ctx, cfg);
-      } catch (err) {
-        document.getElementById('output').textContent = 'Erro: ' + err;
-        console.error('Analisar falhou:', err);
+      } else {
+        // Se não veio gráfico, limpa tela ou destrói gráfico existente
+        if (chart) {
+          chart.destroy();
+          chart = null;
+        }
       }
-    });
-  </script>
+    } catch (err) {
+      document.getElementById('output').textContent = 'Erro: ' + err;
+      console.error('Analisar falhou:', err);
+    }
+  });
+</script>
+
 </body>
 </html>
