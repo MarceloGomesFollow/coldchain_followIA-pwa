@@ -13,9 +13,6 @@
     header img { height:60px; }
     form > label { display:block; margin:0.5rem 0; }
     button { margin-top:1rem; padding:0.5rem 1rem; }
-    pre, #chat-box { background:#f4f4f4; padding:1rem; white-space: pre-wrap; }
-
-    /* Container full-width */
     #grafico-container {
       width: 100%;
       height: 400px;       /* ajuste a altura conforme preferir */
@@ -34,18 +31,9 @@
   </header>
 
   <form id="form">
-    <label>
-      Embarque:
-      <input name="embarque" required>
-    </label>
-    <label>
-      PDF Temperatura:
-      <input type="file" name="temps" accept="application/pdf" required>
-    </label>
-    <label>
-      PDF SM:
-      <input type="file" name="sm" accept="application/pdf" required>
-    </label>
+    <label>Embarque:<input name="embarque" required></label>
+    <label>PDF Temperatura:<input type="file" name="temps" accept="application/pdf" required></label>
+    <label>PDF SM:<input type="file" name="sm" accept="application/pdf" required></label>
     <button type="submit">Analisar</button>
   </form>
 
@@ -70,15 +58,30 @@
       const ctx = document.getElementById('graficoGPT').getContext('2d');
       if (chartRef) chartRef.destroy();
 
-      // extrai limites da própria configuração de datasets
+      // extrai limites
       const dsLimMin = graficoData.datasets.find(d=>d.label.startsWith('Limite Min')).data[0];
       const dsLimMax = graficoData.datasets.find(d=>d.label.startsWith('Limite Máx')).data[0];
 
+      // modifica os datasets para só pontos nos sensores
+      const datasets = graficoData.datasets.map(ds => {
+        if (ds.label.startsWith('Sensor')) {
+          return {
+            ...ds,
+            showLine: false,
+            borderWidth: 0,       // nenhuma linha
+            pointRadius: ds.pointRadius,
+            pointBackgroundColor: ds.pointBackgroundColor
+          };
+        }
+        // limites continuam linhas
+        return ds;
+      });
+
       chartRef = new Chart(ctx, {
-        type: graficoData.tipo,
+        type: 'line',
         data: {
           labels: graficoData.labels,
-          datasets: graficoData.datasets
+          datasets
         },
         options: {
           responsive: true,
