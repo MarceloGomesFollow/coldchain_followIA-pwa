@@ -15,6 +15,14 @@
     form > label { display:block; margin:0.5rem 0; }
     button { margin-top:1rem; padding:0.5rem 1rem; }
     pre, #chat-box { background:#f4f4f4; padding:1rem; white-space: pre-wrap; }
+
+    /* Define tamanho fixo de 1/4 A4: 105mm × 148.5mm */
+    #graficoGPT {
+      width: 105mm;
+      height: 148.5mm;
+      /* Remova margens/padding se for imprimir exato */
+      display: block;
+    }
   </style>
 </head>
 <body>
@@ -43,7 +51,7 @@
   <div id="output"></div>
 
   <h2>Gráfico de Temperatura do Embarque</h2>
-  <canvas id="graficoGPT" width="595" height="420" style="margin-top: 2rem;"></canvas>
+  <canvas id="graficoGPT"></canvas>
 
   <h2>Chat com GPT</h2>
   <div id="chat-box"></div>
@@ -63,7 +71,18 @@
           labels: graficoData.labels,
           datasets: graficoData.datasets
         },
-        options: { responsive: true, maintainAspectRatio: false }
+        options: {
+          responsive: false,
+          maintainAspectRatio: false,
+          scales: {
+            x: {
+              ticks: {
+                autoSkip: true,
+                maxTicksLimit: 10  // ajusta dinamicamente para caber
+              }
+            }
+          }
+        }
       });
     }
 
@@ -103,7 +122,6 @@
       }
     }
 
-    // Registro do Service Worker
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/service-worker.js')
         .then(_=>console.log('✔ SW registrado'))
