@@ -1,4 +1,3 @@
-<!-- index.html -->
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -8,135 +7,67 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <style>
-    body { font-family: sans-serif; padding:1rem; }
-    header { display:flex; align-items:center; gap:1rem; margin-bottom:2rem; }
-    header img { height:60px; }
-    form > label { display:block; margin:0.5rem 0; }
-    button { margin-top:1rem; padding:0.5rem 1rem; }
-    #grafico-container {
-      width: 100%;
-      height: 400px;       /* ajuste a altura conforme preferir */
-      margin: 1rem 0;
-    }
-    #graficoGPT {
-      width: 100% !important;
-      height: 100% !important;
-    }
+    body { font-family:sans-serif; padding:1rem }
+    #grafico-container { width:100%; height:350px; margin:1rem 0 }
+    #graficoGPT { width:100% !important; height:100% !important }
   </style>
 </head>
 <body>
-  <header>
-    <img src="logo.png" alt="ChillChain">
-    <h1>ColdChain Analytics</h1>
-  </header>
-
+  <h1>ColdChain Analytics</h1>
   <form id="form">
     <label>Embarque:<input name="embarque" required></label>
-    <label>PDF Temperatura:<input type="file" name="temps" accept="application/pdf" required></label>
+    <label>PDF Temp:<input type="file" name="temps" accept="application/pdf" required></label>
     <label>PDF SM:<input type="file" name="sm" accept="application/pdf" required></label>
     <button type="submit">Analisar</button>
   </form>
 
-  <h2>Relatório Executivo</h2>
   <div id="output"></div>
-
-  <h2>Gráfico de Temperatura do Embarque</h2>
   <div id="grafico-container">
     <canvas id="graficoGPT"></canvas>
   </div>
 
-  <h2>Chat com GPT</h2>
-  <div id="chat-box"></div>
-  <input type="text" id="user-input" placeholder="Digite sua dúvida..." style="width:80%;">
-  <button onclick="enviarPergunta()">Enviar</button>
-
   <script>
     const backend = 'https://coldchain-backend.onrender.com';
-    let chartRef = null;
-
-    function renderGrafico(graficoData) {
-      const ctx = document.getElementById('graficoGPT').getContext('2d');
-      if (chartRef) chartRef.destroy();
-
-      // extrai limites
-      const dsLimMin = graficoData.datasets.find(d=>d.label.startsWith('Limite Min')).data[0];
-      const dsLimMax = graficoData.datasets.find(d=>d.label.startsWith('Limite Máx')).data[0];
-
-      // modifica os datasets para só pontos nos sensores
-      const datasets = graficoData.datasets.map(ds => {
-        if (ds.label.startsWith('Sensor')) {
-          return {
-            ...ds,
-            showLine: false,
-            borderWidth: 0,       // nenhuma linha
-            pointRadius: ds.pointRadius,
-            pointBackgroundColor: ds.pointBackgroundColor
-          };
-        }
-        // limites continuam linhas
-        return ds;
-      });
-
-      chartRef = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: graficoData.labels,
-          datasets
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            x: {
-              ticks: {
-                autoSkip: true,
-                maxTicksLimit: 15
-              }
-            },
-            y: {
-              suggestedMin: dsLimMin - 2,
-              suggestedMax: dsLimMax + 2
-            }
-          }
-        }
-      });
-    }
+    const ctx = document.getElementById('graficoGPT').getContext('2d');
+    let chart = null;
 
     document.getElementById('form').addEventListener('submit', async e => {
       e.preventDefault();
-      const out = document.getElementById('output');
-      out.textContent = 'Analisando...';
-      try {
-        const resp = await fetch(`${backend}/analisar`, {
-          method: 'POST',
-          body: new FormData(e.target)
-        });
-        if (!resp.ok) throw new Error(await resp.text());
-        const j = await resp.json();
-        out.innerHTML = marked.parse(j.report_md);
-        if (j.grafico) renderGrafico(j.grafico);
-      } catch (err) {
-        out.textContent = 'Erro: ' + err;
-      }
-    });
+      document.getElementById('output').textContent = 'Analisando…';
+      const res = await fetch(`${backend}/analisar`, {
+        method: 'POST', body: new FormData(e.target)
+      });
+      const j = await res.json();
+      document.getElementById('output').innerHTML = marked.parse(j.report_md);
 
-    async function enviarPergunta() {
-      const pergunta = document.getElementById("user-input").value;
-      if (!pergunta) return;
-      const box = document.getElementById("chat-box");
-      box.textContent = "Carregando...";
-      try {
-        const resp = await fetch(`${backend}/chat`, {
-          method: 'POST',
-          headers: {'Content-Type':'application/json'},
-          body: JSON.stringify({pergunta})
-        });
-        const j = await resp.json();
-        box.innerHTML = j.resposta || j.erro;
-      } catch (err) {
-        box.textContent = 'Erro: ' + err;
-      }
-    }
+      // Reconstrói datasets JS (limites usando map no front)
+      const ds = j.grafico.datasets.map(d => {
+        if (d.type === 'line') return d;
+        // scatter recebido já com .data no formato {x,y}
+        return d;
+      });
+      // xLabels para categoria
+      const xLabels = ds.find(d=>d.type==='scatter').data.map(pt=>pt.x);
+
+      const config = {
+        data: { datasets: ds },
+        options: {
+          parsing: { xAxisKey:'x', yAxisKey:'y' },
+          scales: {
+            x: {
+              type: 'category',
+              labels: xLabels,
+              ticks: { autoSkip: true, maxTicksLimit: 15 }
+            },
+            y: {}
+          },
+          responsive: true,
+          maintainAspectRatio: false
+        }
+      };
+      if (chart) chart.destroy();
+      chart = new Chart(ctx, config);
+    });
   </script>
 </body>
 </html>
