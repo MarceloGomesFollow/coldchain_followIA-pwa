@@ -39,7 +39,7 @@
   <pre id="out">Resultado da análise aparecerá aqui…</pre>
 
   <h2>Gráfico de Temperatura do Embarque</h2>
-  <canvas id="graficoGPT" width="400" height="200" style="margin-top: 2rem;"></canvas>
+  <canvas id="graficoGPT" width="100%" height="200" style="margin-top: 2rem;"></canvas>
 
   <h2>Chat com GPT</h2>
   <div id="chat-box"></div>
@@ -50,33 +50,42 @@
     const backend = 'https://coldchain-backend.onrender.com';
 
     let chartRef = null;
-   function renderGrafico(graficoData) {
-  const ctx = document.getElementById('graficoGPT').getContext('2d');
-  if (chartRef) chartRef.destroy();
-  chartRef = new Chart(ctx, {
-    type: graficoData.tipo,
-    data: {
-      labels: graficoData.labels,
-      datasets: graficoData.datasets
-    },
-    options: {
-      responsive: true,
-      plugins: {
-        legend: { position: 'top' },
-        title: { display: true, text: 'Gráfico gerado a partir da análise do embarque' }
-      },
-      scales: {
-        y: {
-          title: { display: true, text: 'Temperatura (°C)' }
+    function renderGrafico(graficoData) {
+      const ctx = document.getElementById('graficoGPT').getContext('2d');
+      if (chartRef) chartRef.destroy();
+      chartRef = new Chart(ctx, {
+        type: graficoData.tipo,
+        data: {
+          labels: graficoData.labels,
+          datasets: graficoData.datasets
         },
-        x: {
-          title: { display: true, text: 'Tempo (min)' }
+        options: {
+          responsive: true,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: { position: 'top' },
+            title: { display: true, text: 'Gráfico de Temperatura por Sensor' },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  return `${context.dataset.label}: ${context.formattedValue}°C`;
+                }
+              }
+            }
+          },
+          scales: {
+            y: {
+              title: { display: true, text: 'Temperatura (°C)' },
+              suggestedMin: 0,
+              suggestedMax: 10
+            },
+            x: {
+              title: { display: true, text: 'Horário' }
+            }
+          }
         }
-      }
+      });
     }
-  });
-}
-
 
     document.getElementById('f').onsubmit = async e => {
       e.preventDefault();
@@ -117,6 +126,7 @@
       }
     }
 
+    // Atalho: enviar com Enter
     document.getElementById("user-input").addEventListener("keydown", function (e) {
       if (e.key === "Enter") {
         e.preventDefault();
