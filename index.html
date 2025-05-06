@@ -17,8 +17,19 @@
   <p id="loading">Carregando serviço, aguarde...</p>
   <form id="form" style="display:none;">
     <label>Embarque:<input name="embarque" required></label>
-    <label>PDF Temp:<input type="file" name="temps" accept="application/pdf" required></label>
-    <label>PDF SM:<input type="file" name="sm" accept="application/pdf" required></label>
+        <label>Relatório de Temperatura (PDF obrigatório):
+      <input type="file" name="relatorio_temp" accept="application/pdf" required>
+    </label>
+
+    <label>Solicitação de Monitoramento SM (PDF obrigatório):
+      <input type="file" name="solicitacao_sm" accept="application/pdf" required>
+    </label>
+
+    <label>CTE – Conhecimento de Embarque (opcional; PDF/Excel/CSV/Imagem):
+      <input type="file" name="cte"
+             accept=".pdf,.xlsx,.xls,.csv,.png,.jpg,.jpeg">
+    </label>
+
     <button type="submit">Analisar</button>
   </form>
 
