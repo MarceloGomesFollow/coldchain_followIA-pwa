@@ -11,14 +11,15 @@
     #grafico-container { width:100%; height:350px; margin:1rem 0; }
     #graficoGPT { width:100% !important; height:100% !important; }
     #loading { display:none; font-weight:bold; }
+    form { display:none; margin-bottom:1rem; }
+    form label { display:block; margin:0.5rem 0; }
   </style>
 </head>
 <body>
   <h1>Follow ColdChain Analytics</h1>
   <p id="loading">Carregando serviço, aguarde...</p>
   
-  <!-- form estava escondido; agora contém tudo inclusive o checkbox -->
-  <form id="form" style="display:none;">
+  <form id="form">
     <label>Embarque:
       <input name="embarque" required>
     </label>
@@ -32,11 +33,9 @@
     </label>
     
     <label>CTE – Conhecimento de Embarque (opcional; PDF/Excel/CSV/Imagem):
-      <input type="file" name="cte"
-             accept=".pdf,.xlsx,.xls,.csv,.png,.jpg,.jpeg">
+      <input type="file" name="cte" accept=".pdf,.xlsx,.xls,.csv,.png,.jpg,.jpeg">
     </label>
 
-    <!-- moved inside the form -->
     <label>
       <input type="checkbox" name="gerar_grafico">
       Gerar gráfico
@@ -54,10 +53,11 @@
     const backend = 'https://coldchain-backend.onrender.com';
     const form    = document.getElementById('form');
     const loadMsg = document.getElementById('loading');
+    const output  = document.getElementById('output');
     const ctx     = document.getElementById('graficoGPT').getContext('2d');
     let chart     = null;
 
-    // healthcheck e exibição do form
+    // 1) Healthcheck para só exibir o form quando a API estiver no ar
     async function warmup() {
       try {
         loadMsg.style.display = 'block';
@@ -71,9 +71,10 @@
     }
     warmup();
 
+    // 2) Submit do formulário
     form.addEventListener('submit', async e => {
       e.preventDefault();
-      document.getElementById('output').textContent = 'Analisando...';
+      output.textContent = 'Analisando...';
       try {
         const res = await fetch(`${backend}/analisar`, {
           method: 'POST',
@@ -84,31 +85,46 @@
           throw txt;
         }
         const j = await res.json();
-        document.getElementById('output').innerHTML = marked.parse(j.report_md);
+        output.innerHTML = marked.parse(j.report_md || j.report_md);
 
-        // Só desenha se vier datasets
+        // 3) Renderiza o gráfico se vier no JSON
         if (j.grafico && Array.isArray(j.grafico.datasets) && j.grafico.datasets.length) {
-          const ds      = j.grafico.datasets;
-          const xLabels = ds.find(d=>d.type==='scatter').data.map(pt=>pt.x);
-          const cfg     = {
-            data: { datasets: ds },
+          const cfg = {
+            type: j.grafico.tipo || 'line',
+            data: {
+              labels: j.grafico.labels,
+              datasets: j.grafico.datasets
+            },
             options: {
-              parsing: { xAxisKey:'x', yAxisKey:'y' },
-              scales: {
-                x: { type:'category', labels:xLabels, ticks:{autoSkip:true,maxTicksLimit:15} },
-                y: {}
+              responsive: true,
+              plugins: {
+                legend: { position: 'top' },
+                title: { display: true, text: 'Gráfico de Temperatura por Sensor' },
+                tooltip: {
+                  callbacks: {
+                    label: ctx => `${ctx.dataset.label}: ${ctx.formattedValue}°C`
+                  }
+                }
               },
-              responsive:true,
-              maintainAspectRatio:false
+              scales: {
+                x: {
+                  title: { display: true, text: 'Horário' },
+                  ticks: { autoSkip: true, maxRotation: 90 }
+                },
+                y: {
+                  title: { display: true, text: 'Temperatura (°C)' }
+                }
+              }
             }
           };
           if (chart) chart.destroy();
           chart = new Chart(ctx, cfg);
-        } else {
-          if (chart) { chart.destroy(); chart = null; }
+        } else if (chart) {
+          chart.destroy();
+          chart = null;
         }
       } catch (err) {
-        document.getElementById('output').textContent = 'Erro: ' + err;
+        output.textContent = 'Erro: ' + err;
         console.error('Analisar falhou:', err);
       }
     });
