@@ -90,7 +90,7 @@
 
         // 3) Renderiza o gráfico se vier no JSON
         if (j.grafico && Array.isArray(j.grafico.datasets) && j.grafico.datasets.length) {
-          // destructura limites e dados
+          // destrutura limites e dados
           const { labels, datasets, yMin, yMax } = j.grafico;
 
           const cfg = {
@@ -103,7 +103,9 @@
                 title: { display: true, text: 'Gráfico de Temperatura por Sensor' },
                 tooltip: {
                   callbacks: {
-                    label: ctx => `${ctx.dataset.label}: ${ctx.formattedValue}°C`
+                    label: function(context) {
+                      return `${context.dataset.label}: ${context.formattedValue}°C`;
+                    }
                   }
                 }
               },
