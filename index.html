@@ -112,22 +112,28 @@
           const { labels, datasets, yMin = 2.0, yMax = 8.0 } = j.grafico;
 
           // OPÇÃO 1: Constrói uma única série de medições com cores dinâmicas
-          const measurements = datasets[0].data;
+          const measurements = datasets[0]?.data || [];
           const dataSets = [
             {
               label: 'Medições',
               data: measurements,
-              borderColor: ctx =>
-                (ctx.parsed.y < yMin || ctx.parsed.y > yMax) ? 'red' : 'green',
-              pointBackgroundColor: ctx =>
-                (ctx.parsed.y < yMin || ctx.parsed.y > yMax) ? 'red' : 'green',
+              borderColor: ctx => {
+                const y = ctx.parsed?.y;
+                return (y !== undefined && (y < yMin || y > yMax)) ? 'red' : 'green';
+              },
+              pointBackgroundColor: ctx => {
+                const y = ctx.parsed?.y;
+                return (y !== undefined && (y < yMin || y > yMax)) ? 'red' : 'green';
+              },
               pointRadius: 4,
               borderWidth: 2,
               fill: false,
               tension: 0.2,
               segment: {
-                borderColor: ctx =>
-                  (ctx.p0.parsed.y < yMin || ctx.p0.parsed.y > yMax) ? 'red' : 'green'
+                borderColor: ctx => {
+                  const y0 = ctx.p0.parsed?.y;
+                  return (y0 !== undefined && (y0 < yMin || y0 > yMax)) ? 'red' : 'green';
+                }
               }
             },
             {
@@ -173,7 +179,10 @@
                 title: { display: true, text: 'Gráfico de Temperatura por Sensor' },
                 tooltip: {
                   callbacks: {
-                    label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y}°C`
+                    label: context => {
+                      const y = context.parsed?.y;
+                      return context.dataset.label + ': ' + (y !== undefined ? y + '°C' : '');
+                    }
                   }
                 }
               },
