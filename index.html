@@ -4,30 +4,22 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Follow ColdChain Analytics</title>
-  <!-- Biblioteca Chart.js para renderização de gráficos -->
+  <!-- Biblioteca Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <!-- Biblioteca Marked.js para converter markdown em HTML -->
+  <!-- Biblioteca Marked.js -->
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <style>
-    /* Estilo básico da página */
     body { font-family: sans-serif; padding: 1rem; }
-    /* Container que define largura e altura do canvas do gráfico */
     #grafico-container { width: 100%; height: 350px; margin: 1rem 0; }
-    /* Ajuste para o canvas preencher o container */
     #graficoGPT { width: 100% !important; height: 100% !important; }
-    /* Mensagem de carregamento padrão escondida */
     #loading { display: none; font-weight: bold; }
-    /* Estilo básico do formulário, inicialmente oculto até o healthcheck */
     form { display: none; margin-bottom: 1rem; }
     form label { display: block; margin: 0.5rem 0; }
   </style>
 </head>
 <body>
   <h1>Follow ColdChain Analytics</h1>
-  <!-- Mensagem de status enquanto o backend está sendo verificado -->
   <p id="loading">Carregando serviço, aguarde...</p>
-  
-  <!-- Formulário para envio de arquivos e parâmetros de análise -->
   <form id="form">
     <label>Embarque:
       <input name="embarque" required>
@@ -42,31 +34,23 @@
       <input type="file" name="cte" accept=".pdf,.xlsx,.xls,.csv,.png,.jpg,.jpeg">
     </label>
     <label>
-      <input type="checkbox" name="gerar_grafico">
+      <input type="checkbox" name="gerar_grafico" checked>
       Gerar gráfico
     </label>
     <button type="submit">Analisar</button>
   </form>
-
-  <!-- Área onde o relatório em markdown será exibido após análise -->
   <div id="output"></div>
-  <!-- Container do gráfico -->
   <div id="grafico-container">
     <canvas id="graficoGPT"></canvas>
   </div>
 
   <script>
-    // Configurações iniciais e seletores de elementos
-    const backend = 'https://coldchain-backend.onrender.com'; // URL do backend
-    const form    = document.getElementById('form');          // Formulário de envio
-    const loadMsg = document.getElementById('loading');      // Mensagem de carregamento
-    const output  = document.getElementById('output');       // Div de saída de relatório
-    let chart     = null;                                    // Referência ao gráfico instanciado
+    const backend = 'https://coldchain-backend.onrender.com';
+    const form    = document.getElementById('form');
+    const loadMsg = document.getElementById('loading');
+    const output  = document.getElementById('output');
+    let chart     = null;
 
-    /*
-      1) Healthcheck: verifica se o backend está ativo
-      Exibe o form apenas após receber status OK.
-    */
     async function warmup() {
       try {
         loadMsg.style.display = 'block';
@@ -80,61 +64,33 @@
     }
     warmup();
 
-    /*
-      2) Submit do formulário: envia arquivos ao backend
-      - PreventDefault para não recarregar a página
-      - Exibe relatório em markdown na div #output
-    */
     form.addEventListener('submit', async e => {
       e.preventDefault();
       output.textContent = 'Analisando...';
       try {
-        const res = await fetch(`${backend}/analisar`, {
-          method: 'POST',
-          body: new FormData(form)
-        });
-        if (!res.ok) {
-          const txt = await res.text();
-          throw txt;
-        }
+        const formData = new FormData(form);
+        const res = await fetch(`${backend}/analisar`, { method: 'POST', body: formData });
+        if (!res.ok) throw await res.text();
 
         const j = await res.json();
         output.innerHTML = marked.parse(j.report_md);
 
-        /*
-          3) Renderiza o gráfico se o JSON contiver dados:
-          - labels: horários das medições
-          - datasets: array de séries (medições + limites)
-          - yMin/yMax: limites de temperatura
-        */
-        if (j.grafico && Array.isArray(j.grafico.datasets) && j.grafico.datasets.length) {
-          // Extrai dados e limites do payload
-          const { labels, datasets, yMin = 2.0, yMax = 8.0 } = j.grafico;
+        const gerar = form.gerar_grafico.checked;
+        if (gerar && j.grafico && Array.isArray(j.grafico.datasets) && j.grafico.datasets.length) {
+          const { labels, datasets, yMin, yMax } = j.grafico;
 
-          // OPÇÃO 1: Constrói uma única série de medições com cores dinâmicas
           const measurements = datasets[0]?.data || [];
           const dataSets = [
             {
               label: 'Medições',
               data: measurements,
-              borderColor: ctx => {
-                const y = ctx.parsed?.y;
-                return (y !== undefined && (y < yMin || y > yMax)) ? 'red' : 'green';
-              },
-              pointBackgroundColor: ctx => {
-                const y = ctx.parsed?.y;
-                return (y !== undefined && (y < yMin || y > yMax)) ? 'red' : 'green';
-              },
+              borderColor: ctx => ((ctx.parsed?.y < yMin || ctx.parsed?.y > yMax) ? 'red' : 'green'),
+              pointBackgroundColor: ctx => ((ctx.parsed?.y < yMin || ctx.parsed?.y > yMax) ? 'red' : 'green'),
               pointRadius: 4,
               borderWidth: 2,
               fill: false,
               tension: 0.2,
-              segment: {
-                borderColor: ctx => {
-                  const y0 = ctx.p0.parsed?.y;
-                  return (y0 !== undefined && (y0 < yMin || y0 > yMax)) ? 'red' : 'green';
-                }
-              }
+              segment: { borderColor: ctx => ((ctx.p0.parsed?.y < yMin || ctx.p0.parsed?.y > yMax) ? 'red' : 'green') }
             },
             {
               label: `Limite Máx (${yMax}°C)`,
@@ -154,7 +110,6 @@
             }
           ];
 
-          // OPÇÃO 2: Ajusta o canvas para alta-resolução (telas Retina)
           const canvasEl = document.getElementById('graficoGPT');
           canvasEl.style.width  = '100%';
           canvasEl.style.height = '100%';
@@ -162,56 +117,26 @@
           canvasEl.height = canvasEl.offsetHeight * window.devicePixelRatio;
           const ctx = canvasEl.getContext('2d');
 
-          /*
-            Configuração final do Chart.js:
-            - type: tipo de gráfico (linha)
-            - data: labels + datasets
-            - options: responsividade, legend, títulos e eixos
-          */
           const cfg = {
             type: j.grafico.tipo || 'line',
             data: { labels, datasets: dataSets },
             options: {
               responsive: true,
               maintainAspectRatio: false,
-              plugins: {
-                legend: { position: 'top' },
-                title: { display: true, text: 'Gráfico de Temperatura por Sensor' },
-                tooltip: {
-                  callbacks: {
-                    label: context => {
-                      const y = context.parsed?.y;
-                      return context.dataset.label + ': ' + (y !== undefined ? y + '°C' : '');
-                    }
-                  }
-                }
-              },
+              plugins: { legend: { position: 'top' }, title: { display: true, text: 'Gráfico de Temperatura' } },
               scales: {
-                x: {
-                  title: { display: true, text: 'Horário' },
-                  ticks: { autoSkip: true, maxRotation: 90 }
-                },
-                y: {
-                  min: yMin - 1,
-                  max: yMax + 1,
-                  title: { display: true, text: 'Temperatura (°C)' }
-                }
+                x: { title: { display: true, text: 'Horário' }, ticks: { autoSkip: true, maxTicksLimit: 12 } },
+                y: { min: yMin, max: yMax, title: { display: true, text: 'Temperatura (°C)' }, grid: { color: 'rgba(0,0,0,0.05)' } }
               }
             }
           };
 
-          // Destrói gráfico anterior antes de criar novo
           if (chart) chart.destroy();
           chart = new Chart(ctx, cfg);
-
         } else if (chart) {
-          // Se não houver dados, destrói o gráfico existente
-          chart.destroy();
-          chart = null;
+          chart.destroy(); chart = null;
         }
-
       } catch (err) {
-        // Tratamento de erro para análise falha
         output.textContent = 'Erro: ' + err;
         console.error('Analisar falhou:', err);
       }
